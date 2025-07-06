@@ -12,8 +12,13 @@ int main() {
     cout<<"$ ";
 
     string input;
-    getline(std::cin, input);
-    cout<<input<<": command not found"<<endl;
+    getline(cin, input);
+    if(input == "exit 0"){
+      break;
+    }
+    else{
+      cout<<input<<": command not found"<<endl;
+    }
   }
-  
+  return 0;
 }
