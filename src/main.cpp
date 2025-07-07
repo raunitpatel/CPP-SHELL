@@ -8,26 +8,83 @@
 
 using namespace std;
 namespace fs = std::filesystem;
+vector<string> get_cleaned_text(string rem_command) {
+  vector<string> tokens;
+  string output = "";
 
+  bool is_single_quote = false, is_double_quote = false;
+  bool escaped = false;
 
+  int len = rem_command.size();
+  for (int i = 0; i < len; ++i) {
+    char ch = rem_command[i];
 
-pair<string,string> break_command(string command){
-  string first_word="";
-  string rem_words="";
-  bool flag=false;
-  for(auto x:command){
-    if(x==' ' and !flag){
-      flag=true;
+    if (escaped) {
+      output += ch;
+      escaped = false;
+      continue;
     }
-    else if(flag){
-      rem_words+=x;
-    }
-    else{
-      first_word+=x;
+
+    if (ch == '\\') {
+      if (is_single_quote) {
+        output += ch;
+      } 
+      else if (is_double_quote) {
+        if (i + 1 < len) {
+          char next_char = rem_command[i + 1];
+          if (next_char == '\\' || next_char == '"' || next_char == '$' || next_char == '\n') {
+            escaped = true; 
+            continue;
+          }
+           else {
+            output += ch;
+          }
+        } 
+        else {
+          output += ch;
+        }
+      } 
+      else {
+        escaped = true;
+        continue;
+      }
+    } 
+    else if (ch == '"' && !is_single_quote) {
+      is_double_quote = !is_double_quote;
+    } 
+    else if (ch == '\'' && !is_double_quote) {
+      is_single_quote = !is_single_quote;
+    } 
+    else if (ch == ' ' && !is_single_quote && !is_double_quote) {
+      if(!output.empty()){
+        tokens.push_back(output);
+        output.clear();
+      }
+    } else {
+      output += ch;
     }
   }
-  return {first_word, rem_words};
 
+  if (!output.empty()) {
+    tokens.push_back(output);
+  }
+
+  return tokens;
+}
+
+string escapeShellArg(string arg)
+{
+  if (arg.find_first_of(" \t\n'\"\\") == string::npos)
+  {
+    return arg;
+  }
+
+  if (arg.find('\'') != string::npos)
+  {
+    return "\"" + arg + "\"";
+  }
+
+  return "'" + arg + "'";
 }
 
 string get_executable_path(string target_filename){
@@ -78,79 +135,75 @@ int main() {
 
     string input;
     getline(cin, input);
+    vector<string> tokens = get_cleaned_text(input);
+    string command_name = tokens[0];
+    vector<string> args;
+    for(int i=1;i<tokens.size();i++){
+      args.push_back(tokens[i]);
+    } 
 
-    auto [command_name, rem_command] = break_command(input);
-
-    if(command_name == "exit"){
-      if(rem_command == "0"){
+    if(command_name == "exit" ){
+      if(args.size() > 0 and args[0] == "0"){
         break;
       }
     }
 
     else if(command_name == "echo"){
-      string output="";
-      bool is_single_quote=false, is_double_quote=false;
-      int len= rem_command.size();
-     
-      for(int i=0;i<len;i++){
-
-        if(rem_command[i]=='\\' and !is_single_quote){
-          if(i<len-1)output+=rem_command[i+1];
-          i+=1;
-          continue;
-        }
-        if(rem_command[i]=='\"' and !is_single_quote){
-          is_double_quote=!is_double_quote;
-          continue;
-        }
-        if(rem_command[i]=='\'' and !is_double_quote){
-          is_single_quote=!is_single_quote;
-          continue;
-        }
-        else if(!is_single_quote and !is_double_quote and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
-          continue;
-        }
-        else output+=rem_command[i];
+      for(auto arg:args){
+        cout<<arg<<" ";
       }
-      
-      
-      cout<<output<<endl;
+      cout<<endl;
     }
 
     else if(command_name == "type"){
-      if(commands.find(rem_command) != commands.end()){
-        cout<<rem_command<<" is a shell builtin"<<endl;
+      if(args.size() > 0 and commands.find(args[0]) != commands.end()){
+        cout<<args[0]<<" is a shell builtin"<<endl;
       }
-      else{
-        string filepath=get_executable_path(rem_command);
+      else if(args.size() > 0 ){
+        string filepath=get_executable_path(args[0]);
         if(filepath != ""){
-          cout<<rem_command<<" is "<< filepath<<endl;
+          cout<<args[0]<<" is "<< filepath<<endl;
         }
-        else cout<<rem_command<< ": not found"<<endl;
+        else cout<<args[0]<< ": not found"<<endl;
       }
     }
     else if(get_executable_path(command_name) != ""){
-      string filepath = get_executable_path(command_name);
-      system(input.c_str());
+      string fullCommand = escapeShellArg(command_name);
+      for(auto arg:args){
+        fullCommand += " " + escapeShellArg(arg);
+      }
+      system(fullCommand.c_str());
     }
     else if(command_name == "pwd"){
       cout<<curr_dir.string()<<endl;
     }
     else if(command_name == "cd"){
       string HOME_ENV = getenv("HOME");
-      fs::path abs_dir_path = rem_command;
-      if(rem_command != "" and rem_command[0] == '~'){
-        if(HOME_ENV != ""){
-          string suffix = rem_command.substr(1);
-          abs_dir_path = HOME_ENV + suffix;
+      string path_to_go;
+      if(args.empty()){
+          if(HOME_ENV != ""){
+            path_to_go = HOME_ENV;
+          }
+          else{
+            path_to_go = "";
+          }
+              
+      } 
+      else{
+          path_to_go = args[0];
+      }
+      if (!args.empty() && !path_to_go.empty() && path_to_go[0] == '~') {
+        std::string suffix = path_to_go.substr(1);
+        if(!HOME_ENV.empty()){
+            path_to_go = std::string(HOME_ENV) + suffix;
         }
       }
-      if(fs::exists(abs_dir_path) and fs::is_directory(abs_dir_path)){
-        fs::current_path(abs_dir_path);
-        curr_dir = fs::current_path();
-      }
-      else{
-        cout << "cd: " << abs_dir_path.string() << ": No such file or directory"<<endl;
+      fs::path abs_dir_path(path_to_go);
+      if (fs::exists(abs_dir_path) && fs::is_directory(abs_dir_path)) {
+          fs::current_path(abs_dir_path);
+          curr_dir = fs::current_path();
+      } else {
+          std::cout << "cd: " << abs_dir_path.string() << ": No such file or directory" << std::endl;
       }
 
     }
