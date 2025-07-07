@@ -4,7 +4,9 @@
 #include <set>
 #include <filesystem>
 #include <cstdlib>
-#include <unistd.h>  
+#include <unistd.h> 
+#include <algorithm> 
+#include <fstream>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -149,10 +151,37 @@ int main() {
     }
 
     else if(command_name == "echo"){
-      for(auto arg:args){
-        cout<<arg<<" ";
+      if(find(args.begin(), args.end(), "1>") == args.end() ){
+        for(auto arg:args){
+          cout<<arg<<" ";
+        }
+        cout<<endl;
       }
-      cout<<endl;
+      else{
+        string content = "";
+        string filepath = "";
+        bool check=false;
+        for(auto arg:args){
+          if(check){
+            filepath = arg;
+            break;
+          }
+          else if(arg == "1>")check = true;
+          else{
+            content += arg + " ";
+          }
+        }
+        if (!content.empty()) {
+          content.pop_back();
+        }
+        ofstream out(filepath);
+        if(out.is_open()){
+          out<<content<<endl;
+          out.close();
+        }
+
+      }
+      
     }
 
     else if(command_name == "type"){
@@ -167,6 +196,7 @@ int main() {
         else cout<<args[0]<< ": not found"<<endl;
       }
     }
+
     else if(get_executable_path(command_name) != ""){
       string fullCommand = escapeShellArg(command_name);
       for(auto arg:args){
@@ -174,9 +204,11 @@ int main() {
       }
       system(fullCommand.c_str());
     }
+
     else if(command_name == "pwd"){
       cout<<curr_dir.string()<<endl;
     }
+
     else if(command_name == "cd"){
       string HOME_ENV = getenv("HOME");
       string path_to_go;
@@ -207,6 +239,7 @@ int main() {
       }
 
     }
+    
     else{
       cout<<input<<": command not found"<<endl;
     }
