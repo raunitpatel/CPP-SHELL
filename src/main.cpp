@@ -65,7 +65,10 @@ string get_executable_path(string target_filename){
 int main() {
   // Flush after every std::cout / std:cerr
   
-  set<string> commands = {"exit", "echo", "type", "pwd"};
+  set<string> commands = {"exit", "echo", "type", "pwd", "cd"};
+  fs::path curr_dir = fs::current_path();
+
+
   while(1){
     cout << unitbuf;
     cerr << unitbuf;
@@ -105,8 +108,17 @@ int main() {
       system(input.c_str());
     }
     else if(command_name == "pwd"){
-      fs::path curr_dir = fs::current_path();
       cout<<curr_dir.string()<<endl;
+    }
+    else if(command_name == "cd"){
+      fs::path abs_dir_path = rem_command;
+      if(fs::exists(abs_dir_path) and fs::is_directory(abs_dir_path)){
+        fs::current_path(abs_dir_path);
+        curr_dir = fs::current_path();
+      }
+      else{
+        cout << "cd: " << abs_dir_path.string() << ": No such file or directory"<<endl;
+      }
 
     }
     else{
