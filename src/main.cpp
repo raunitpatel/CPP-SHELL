@@ -65,7 +65,7 @@ string get_executable_path(string target_filename){
 int main() {
   // Flush after every std::cout / std:cerr
   
-  set<string> commands = {"exit", "echo", "type"};
+  set<string> commands = {"exit", "echo", "type", "pwd"};
   while(1){
     cout << unitbuf;
     cerr << unitbuf;
@@ -103,6 +103,10 @@ int main() {
     else if(get_executable_path(command_name) != ""){
       string filepath = get_executable_path(command_name);
       system(input.c_str());
+    }
+    else if(command_name == "pwd"){
+      fs::path curr_dir = fs::current_path();
+      cout<<curr_dir.string()<<endl;
 
     }
     else{
