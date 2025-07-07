@@ -93,6 +93,11 @@ int main() {
       int len= rem_command.size();
       if(rem_command.find('\"') == string::npos){
         for(int i=0;i<len;i++){
+          if(rem_command[i]=='\\' and !flag){
+            if(i<len-1)output+=rem_command[i+1];
+            i+=1;
+            continue;
+          }
           if(rem_command[i]=='\''){
             flag=!flag;
           }
@@ -104,6 +109,11 @@ int main() {
       }
       else{
         for(int i=0;i<len;i++){
+          if(rem_command[i]=='\\' and !flag){
+            if(i<len-1)output+=rem_command[i+1];
+            i+=1;
+            continue;
+          }
           if(rem_command[i]=='\"'){
             flag=!flag;
           }
