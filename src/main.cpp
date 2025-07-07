@@ -88,7 +88,19 @@ int main() {
     }
 
     else if(command_name == "echo"){
-      cout<<rem_command<<endl;
+      string output="";
+      bool flag=false;
+      int len= rem_command.size();
+      for(int i=0;i<len;i++){
+        if(rem_command[i]=='\''){
+          flag=!flag;
+        }
+        else if(!flag and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
+          continue;
+        }
+        else output+=rem_command[i];
+      }
+      cout<<output<<endl;
     }
 
     else if(command_name == "type"){
