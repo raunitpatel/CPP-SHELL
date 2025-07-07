@@ -89,40 +89,30 @@ int main() {
 
     else if(command_name == "echo"){
       string output="";
-      bool flag=false;
+      bool is_single_quote=false, is_double_quote=false;
       int len= rem_command.size();
-      if(rem_command.find('\"') == string::npos){
-        for(int i=0;i<len;i++){
-          if(rem_command[i]=='\\' and !flag){
-            if(i<len-1)output+=rem_command[i+1];
-            i+=1;
-            continue;
-          }
-          if(rem_command[i]=='\''){
-            flag=!flag;
-          }
-          else if(!flag and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
-            continue;
-          }
-          else output+=rem_command[i];
+     
+      for(int i=0;i<len;i++){
+
+        if(rem_command[i]=='\\' and !is_single_quote){
+          if(i<len-1)output+=rem_command[i+1];
+          i+=1;
+          continue;
         }
-      }
-      else{
-        for(int i=0;i<len;i++){
-          if(rem_command[i]=='\\' and !flag){
-            if(i<len-1)output+=rem_command[i+1];
-            i+=1;
-            continue;
-          }
-          if(rem_command[i]=='\"'){
-            flag=!flag;
-          }
-          else if(!flag and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
-            continue;
-          }
-          else output+=rem_command[i];
+        if(rem_command[i]=='\"' and !is_single_quote){
+          is_double_quote=!is_double_quote;
+          continue;
         }
+        if(rem_command[i]=='\'' and !is_double_quote){
+          is_single_quote=!is_single_quote;
+          continue;
+        }
+        else if(!is_single_quote and !is_double_quote and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
+          continue;
+        }
+        else output+=rem_command[i];
       }
+      
       
       cout<<output<<endl;
     }
