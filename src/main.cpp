@@ -30,12 +30,15 @@ pair<string,string> break_command(string command){
 
 }
 
-vector<string> get_folders_paths(string str){
-  vector<string> ans;
+string get_executable_path(string target_filename){
+  string path_env = "";
+  path_env = getenv("PATH");
+  vector<string> folders;
   string folder="";
-  for(auto x:str){
+  string ans="";
+  for(auto x:path_env){
     if(x==':'){
-      ans.push_back(folder);
+      folders.push_back(folder);
       folder="";
     }
     else{
@@ -43,7 +46,17 @@ vector<string> get_folders_paths(string str){
     }
   }
   if (!folder.empty()) {
-      ans.push_back(folder); 
+      folders.push_back(folder); 
+  }
+
+  for(auto dir:folders){
+    if(fs::exists(dir) == false) continue;
+
+    fs::path filepath = fs::path(dir) / target_filename;
+    if (fs::exists(filepath) && access(filepath.c_str(), X_OK) == 0) {
+      ans = filepath.string();
+      return ans;
+    }
   }
   return ans;
 }
@@ -51,7 +64,7 @@ vector<string> get_folders_paths(string str){
 
 int main() {
   // Flush after every std::cout / std:cerr
-  const char *path_env = std::getenv("PATH");
+  
   set<string> commands = {"exit", "echo", "type"};
   while(1){
     cout << unitbuf;
@@ -64,11 +77,6 @@ int main() {
     getline(cin, input);
 
     auto [command_name, rem_command] = break_command(input);
-    
-    if(commands.find(command_name) == commands.end()){
-      cout<<input<<": command not found"<<endl;
-      continue;
-    }
 
     if(command_name == "exit"){
       if(rem_command == "0"){
@@ -81,29 +89,24 @@ int main() {
     }
 
     else if(command_name == "type"){
-
-      vector<string> folders_paths=get_folders_paths(path_env);
-      
       if(commands.find(rem_command) != commands.end()){
         cout<<rem_command<<" is a shell builtin"<<endl;
       }
       else{
-        string target_filename = rem_command;
-        bool flag=false;
-
-        for(auto dir:folders_paths){
-          if(fs::exists(dir) == false) continue;
-
-          fs::path filepath = fs::path(dir) / target_filename;
-          if (fs::exists(filepath) && access(filepath.c_str(), X_OK) == 0) {
-            cout<<target_filename<<" is "<<filepath.string()<<endl;
-            flag=true;
-            break;
-          }
+        string filepath=get_executable_path(rem_command);
+        if(filepath != ""){
+          cout<<rem_command<<" is "<< filepath<<endl;
         }
-
-        if(!flag) cout<<rem_command<< ": not found"<<endl;
+        else cout<<rem_command<< ": not found"<<endl;
       }
+    }
+    else if(get_executable_path(command_name) != ""){
+      string filepath = get_executable_path(command_name);
+      system(input.c_str());
+
+    }
+    else{
+      cout<<input<<": command not found"<<endl;
     }
   }
   return 0;
