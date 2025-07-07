@@ -91,15 +91,29 @@ int main() {
       string output="";
       bool flag=false;
       int len= rem_command.size();
-      for(int i=0;i<len;i++){
-        if(rem_command[i]=='\''){
-          flag=!flag;
+      if(rem_command.find('\"') == string::npos){
+        for(int i=0;i<len;i++){
+          if(rem_command[i]=='\''){
+            flag=!flag;
+          }
+          else if(!flag and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
+            continue;
+          }
+          else output+=rem_command[i];
         }
-        else if(!flag and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
-          continue;
-        }
-        else output+=rem_command[i];
       }
+      else{
+        for(int i=0;i<len;i++){
+          if(rem_command[i]=='\"'){
+            flag=!flag;
+          }
+          else if(!flag and i!=0 and rem_command[i]==' ' and rem_command[i-1]==' '){
+            continue;
+          }
+          else output+=rem_command[i];
+        }
+      }
+      
       cout<<output<<endl;
     }
 
