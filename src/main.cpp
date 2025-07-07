@@ -31,12 +31,12 @@ pair<string,string> break_command(string command){
 }
 
 string get_executable_path(string target_filename){
-  string path_env = "";
-  path_env = getenv("PATH");
+  string PATH_ENV = "";
+  PATH_ENV = getenv("PATH");
   vector<string> folders;
   string folder="";
   string ans="";
-  for(auto x:path_env){
+  for(auto x:PATH_ENV){
     if(x==':'){
       folders.push_back(folder);
       folder="";
@@ -111,7 +111,14 @@ int main() {
       cout<<curr_dir.string()<<endl;
     }
     else if(command_name == "cd"){
+      string HOME_ENV = getenv("HOME");
       fs::path abs_dir_path = rem_command;
+      if(rem_command != "" and rem_command[0] == '~'){
+        if(HOME_ENV != ""){
+          string suffix = rem_command.substr(1);
+          abs_dir_path = HOME_ENV + suffix;
+        }
+      }
       if(fs::exists(abs_dir_path) and fs::is_directory(abs_dir_path)){
         fs::current_path(abs_dir_path);
         curr_dir = fs::current_path();
