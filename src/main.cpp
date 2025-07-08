@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <filesystem>
 #include <cstdlib>
 #include <unistd.h> 
@@ -10,6 +12,35 @@
 
 using namespace std;
 namespace fs = std::filesystem;
+
+set<string> commands = {"exit", "echo", "type", "pwd", "cd"};
+
+char* command_generator(const char* text, int state) {
+  static set<string>::iterator it;
+  static string prefix;
+
+  if (state == 0) {
+    it = commands.begin();  // reset on first call
+    prefix = text;
+  }
+
+  while (it != commands.end()) {
+    const string& cmd = *it;
+    ++it;
+
+    if (cmd.find(prefix) == 0) {
+      return strdup(cmd.c_str());  // must return malloc'ed C string
+    }
+  }
+
+  return nullptr;
+}
+
+char** command_completion(const char* text, int start, int end) {
+  rl_attempted_completion_over = 1; // prevent readline from filename completion
+  return rl_completion_matches(text, command_generator);
+}
+
 vector<string> get_cleaned_text(string rem_command) {
   vector<string> tokens;
   string output = "";
@@ -121,10 +152,12 @@ string get_executable_path(string target_filename){
 }
 
 
+
 int main() {
   // Flush after every std::cout / std:cerr
   
-  set<string> commands = {"exit", "echo", "type", "pwd", "cd"};
+  rl_attempted_completion_function = command_completion;
+  
   fs::path curr_dir = fs::current_path();
 
 
@@ -133,10 +166,9 @@ int main() {
     cerr << unitbuf;
 
     // Uncomment this block to pass the first stage
-    cout<<"$ ";
-
-    string input;
-    getline(cin, input);
+    char* input_cstr = readline("$ ");
+    string input = input_cstr;
+    free(input_cstr);
     vector<string> tokens = get_cleaned_text(input);
     string command_name = tokens[0];
     vector<string> args;
