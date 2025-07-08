@@ -151,21 +151,36 @@ int main() {
     }
 
     else if(command_name == "echo"){
+
       bool has_stdout_redirect = false;
       bool has_stderr_redirect = false;
+      bool has_stdout_append_redirect = false;
+      bool has_stderr_append_redirect = false;
+
       string stdout_file = "";
       string stderr_file = "";
+
       string content = "";
 
       for(int i=0;i<args.size();i++){
-        if(args[i] == "1>" and i+1 < args.size()){
+        if((args[i] == "1>" or args[i] == ">") and i+1 < args.size()){
           stdout_file = args[i+1];
           has_stdout_redirect = true;
           i++;
         }
-        else if(args[i] == "2>" and i+1 < args.size()){
+        else if((args[i] == "1>>" or args[i] == ">>") and i+1 < args.size()){
+          stdout_file = args[i+1];
+          has_stdout_append_redirect = true;
+          i++;
+        }
+        else if(args[i] == "2>"  and i+1 < args.size()){
           stderr_file = args[i+1];
           has_stderr_redirect = true;
+          i++;
+        }
+        else if(args[i] == "2>>" and i+1 < args.size()){
+          stderr_file = args[i+1];
+          has_stderr_append_redirect = true;
           i++;
         }
         else{
@@ -176,8 +191,14 @@ int main() {
       if(!content.empty()){
         content.pop_back();
       }
-
-      if(has_stdout_redirect){
+      if(has_stdout_append_redirect){
+        ofstream out(stdout_file, ios::app); // append
+        if (out.is_open()) {
+            out << content << endl;
+            out.close();
+        }
+      }
+      else if(has_stdout_redirect){
         ofstream out(stdout_file);
         if(out.is_open()){
           out<<content<<endl;
@@ -194,8 +215,6 @@ int main() {
           err.close();
         }
       }
-
-      
     }
 
     else if(command_name == "type"){
