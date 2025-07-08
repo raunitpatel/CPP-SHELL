@@ -16,28 +16,57 @@ namespace fs = std::filesystem;
 set<string> commands = {"exit", "echo", "type", "pwd", "cd"};
 
 char* command_generator(const char* text, int state) {
-  static set<string>::iterator it;
+  static vector<string> all_candidates;
+  static size_t index;
   static string prefix;
 
   if (state == 0) {
-    it = commands.begin();  // reset on first call
+    // Reset for a new completion attempt
+    all_candidates.clear();
+    index = 0;
     prefix = text;
+
+    // 1. Add built-in commands
+    for (const auto& cmd : commands) {
+      all_candidates.push_back(cmd);
+    }
+
+    // 2. Add external commands from PATH
+    const char* path_env = getenv("PATH");
+    if (path_env) {
+      stringstream ss(path_env);
+      string dir;
+      while (getline(ss, dir, ':')) {
+        if (!fs::exists(dir)) continue;
+
+        for (const auto& entry : fs::directory_iterator(dir)) {
+          if (entry.is_regular_file() &&
+              access(entry.path().c_str(), X_OK) == 0) {
+            all_candidates.push_back(entry.path().filename().string());
+          }
+        }
+      }
+    }
+
+    // Remove duplicates
+    sort(all_candidates.begin(), all_candidates.end());
+    all_candidates.erase(unique(all_candidates.begin(), all_candidates.end()), all_candidates.end());
   }
 
-  while (it != commands.end()) {
-    const string& cmd = *it;
-    ++it;
-
+  // Return matching commands
+  while (index < all_candidates.size()) {
+    const string& cmd = all_candidates[index++];
     if (cmd.find(prefix) == 0) {
-      return strdup(cmd.c_str());  // must return malloc'ed C string
+      return strdup(cmd.c_str());  // must be heap-allocated
     }
   }
 
   return nullptr;
 }
 
+
 char** command_completion(const char* text, int start, int end) {
-  rl_attempted_completion_over = 1; // prevent readline from filename completion
+  // rl_attempted_completion_over = 1; // prevent readline from filename completion
   return rl_completion_matches(text, command_generator);
 }
 
