@@ -343,6 +343,15 @@ class History{
       curr_pos = 0;
       sz = 0;
     }
+    void write_history_to_file(string filename){
+      ofstream outfile(filename);
+
+      for(auto &cmd: historic_commands){
+        outfile<< cmd <<endl;
+      }
+      outfile.close();
+      return;
+    }
     void append_commands_to_history_from_file(string filename){
       ifstream infile(filename);
       string line;
@@ -354,6 +363,7 @@ class History{
         }
       }
       infile.close();
+      return;
     }
     void put_commands_in_history(string command){
       historic_commands.push_back(command);
@@ -463,6 +473,9 @@ int main() {
       }
       else if(args[0] == "-r"){
         cmd_history.append_commands_to_history_from_file(args[1]);
+      }
+      else if(args[0] == "-w"){
+        cmd_history.write_history_to_file(args[1]);
       }
       else{
         int pos = stoi(args[0]);
