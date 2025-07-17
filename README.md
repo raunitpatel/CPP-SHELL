@@ -49,23 +49,6 @@ sudo apt-get update
 sudo apt-get install build-essential libreadline-dev
 ```
 
-**CentOS/RHEL/Fedora:**
-```bash
-# CentOS/RHEL
-sudo yum install gcc-c++ readline-devel
-
-# Fedora
-sudo dnf install gcc-c++ readline-devel
-```
-
-**macOS:**
-```bash
-# Install Xcode command line tools
-xcode-select --install
-
-# Install readline via Homebrew
-brew install readline
-```
 
 ## Building and Running
 
@@ -73,26 +56,11 @@ brew install readline
 ```bash
 # Clone or download the project
 git clone <repository-url>
-cd shell
+cd CPP-SHELL
 
-# Build the shell
-make
-
-# Run the shell
-./shell
-```
-
-### Build Options
-```bash
-make clean      # Clean build artifacts
-make install    # Install to /usr/local/bin (requires sudo)
-make uninstall  # Remove from /usr/local/bin
-make run        # Build and run in one command
-```
-
-### Manual Compilation
-```bash
-g++ -std=c++17 -Wall -Wextra -g main.cpp completion.cpp parser.cpp executor.cpp history.cpp -o shell -lreadline
+# Build and run the code
+chmod +x your_program.sh
+./your_program.sh
 ```
 
 ## Usage Examples
