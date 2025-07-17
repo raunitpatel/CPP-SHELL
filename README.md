@@ -1,4 +1,4 @@
-# Custom Shell Implementation
+# CPP SHELL
 
 A feature-rich, Unix-like shell implementation written in C++ with support for command execution, pipelines, history management, and tab completion.
 
