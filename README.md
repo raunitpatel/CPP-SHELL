@@ -30,8 +30,6 @@ src/
 ├── parser.cpp       # Command parsing and text processing
 ├── executor.cpp     # Command execution and pipeline handling
 ├── history.cpp      # History management implementation
-├── Makefile         # Build configuration
-└── README.md        # This file
 ```
 
 ## Prerequisites
