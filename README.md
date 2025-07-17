@@ -23,7 +23,7 @@ A feature-rich, Unix-like shell implementation written in C++ with support for c
 ## Project Structure
 
 ```
-shell/
+src/
 ├── shell.h          # Main header file with declarations
 ├── main.cpp         # Main shell loop and built-in commands
 ├── completion.cpp   # Tab completion system
