@@ -34,8 +34,9 @@ char* command_generator(const char* text, int state) {
 
     // 2. Add external commands from PATH
     string PATH_ENV = "";
-    PATH_ENV = getenv("PATH");
-    if(PATH_ENV != " "){
+    const char* path_env = getenv("PATH");
+    if(path_env != nullptr){
+      PATH_ENV = path_env;
       vector<string> folders;
       string folder="";
       for(auto x:PATH_ENV){
@@ -163,7 +164,10 @@ string escapeShellArg(string arg)
 
 string get_executable_path(string target_filename){
   string PATH_ENV = "";
-  PATH_ENV = getenv("PATH");
+  const char* path_env = getenv("PATH");
+  if(path_env == nullptr) return "";
+  
+  PATH_ENV = path_env;
   vector<string> folders;
   string folder="";
   string ans="";
@@ -278,7 +282,7 @@ void execute_pipeline(vector<vector<string>> &pipe_commands){
           }
         }
         else{
-          std::cout << content << std::endl;
+          cout<<content<<endl;
         }
 
         if(has_stderr_redirect){
@@ -404,6 +408,8 @@ class History{
 
 int main() {
   // Flush after every std::cout / std:cerr
+  cout << unitbuf;
+  cerr << unitbuf;
   
   rl_attempted_completion_function = command_completion;
   
@@ -411,25 +417,30 @@ int main() {
 
   History cmd_history;
 
+  string HISTFILE_ENV = "";
+  const char* histfile_env = getenv("HISTFILE");
+  if(histfile_env != nullptr){
+    HISTFILE_ENV = histfile_env;
+    cmd_history.append_commands_to_history_from_file(HISTFILE_ENV);
+  }
 
   while(1){
-    cout << unitbuf;
-    cerr << unitbuf;
-
-    // Uncomment this block to pass the first stage
     char* input_cstr = readline("$ ");
+    if(input_cstr == nullptr) {
+      // Handle EOF (Ctrl+D)
+      break;
+    }
+    
     string input = input_cstr;
     free(input_cstr);
+    
     vector<string> tokens = get_cleaned_text(input);
     if(tokens.empty()){
       continue;
     }
     
-    
     cmd_history.put_commands_in_history(input);  
-    
 
-    
     string command_name = tokens[0];
     vector<string> args;
     for(int i=1;i<tokens.size();i++){
@@ -447,7 +458,8 @@ int main() {
       continue;
     }
     else if(command_name == "cd"){
-      string HOME_ENV = getenv("HOME");
+      const char* home_env = getenv("HOME");
+      string HOME_ENV = (home_env != nullptr) ? home_env : "";
       string path_to_go;
       if(args.empty()){
           if(HOME_ENV != ""){
