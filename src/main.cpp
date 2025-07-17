@@ -14,7 +14,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-set<string> commands = {"exit", "echo", "type", "pwd", "cd"};
+set<string> commands = {"exit", "echo", "type", "pwd", "cd", "history"};
 
 char* command_generator(const char* text, int state) {
   static vector<string> matches;
@@ -333,6 +333,29 @@ void execute_pipeline(vector<vector<string>> &pipe_commands){
   while(wait(nullptr) > 0 );
 }
 
+class History{
+  private:
+    vector<string> historic_commands;
+    int curr_pos;
+    int sz;
+  public:
+    History(){
+      curr_pos = 0;
+      sz = 0;
+    }
+    void put_commands_in_history(string command){
+      historic_commands.push_back(command);
+      sz++;
+
+      return;
+    }
+    void print_history(){
+      for(int i=0;i<sz;i++){
+        cout<<i+1<<" "<<historic_commands[i]<<endl;
+      }
+      return;
+    }
+};
 
 int main() {
   // Flush after every std::cout / std:cerr
@@ -340,6 +363,8 @@ int main() {
   rl_attempted_completion_function = command_completion;
   
   fs::path curr_dir = fs::current_path();
+
+  History cmd_history;
 
 
   while(1){
@@ -355,6 +380,7 @@ int main() {
       continue;
     }
     
+    cmd_history.put_commands_in_history(input);
     
     string command_name = tokens[0];
     vector<string> args;
@@ -372,7 +398,6 @@ int main() {
       cout<<curr_dir.string()<<endl;
       continue;
     }
-
     else if(command_name == "cd"){
       string HOME_ENV = getenv("HOME");
       string path_to_go;
@@ -404,6 +429,10 @@ int main() {
       else{
           std::cout << "cd: " << abs_dir_path.string() << ": No such file or directory" << std::endl;
       }
+      continue;
+    }
+    else if(command_name == "history"){
+      cmd_history.print_history();
       continue;
     }
 
