@@ -100,6 +100,7 @@ $ history          # Show all history
 $ history 5        # Show last 5 commands
 $ history -w file  # Write history to file
 $ history -r file  # Read history from file
+$ history -a file  # Append history to file
 ```
 
 ### Tab Completion
@@ -138,7 +139,7 @@ The shell respects the following environment variables:
 export HISTFILE=~/.shell_history
 
 # Then run the shell
-./shell
+./your_program.sh
 ```
 
 ## Limitations
