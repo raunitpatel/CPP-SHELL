@@ -448,7 +448,12 @@ int main() {
     } 
 
     if(command_name == "exit" ){
+
       if(args.size() > 0 and args[0] == "0"){
+        if(histfile_env != nullptr){
+          HISTFILE_ENV = histfile_env;
+          cmd_history.append_history_to_file(HISTFILE_ENV);
+        }
         break;
       }
     }
