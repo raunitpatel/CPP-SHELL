@@ -338,10 +338,12 @@ class History{
     vector<string> historic_commands;
     int curr_pos;
     int sz;
+    int last_appended_index;
   public:
     History(){
       curr_pos = 0;
       sz = 0;
+      last_appended_index = 0;
     }
     void write_history_to_file(string filename){
       ofstream outfile(filename);
@@ -349,6 +351,16 @@ class History{
       for(auto &cmd: historic_commands){
         outfile<< cmd <<endl;
       }
+      outfile.close();
+      return;
+    }
+    void append_history_to_file(string filename){
+      ofstream outfile(filename, ios::app);
+
+      for(int i=last_appended_index;i<sz;++i) {
+        outfile << historic_commands[i] << endl;
+      }
+      last_appended_index = sz;
       outfile.close();
       return;
     }
@@ -473,6 +485,9 @@ int main() {
       }
       else if(args[0] == "-r"){
         cmd_history.append_commands_to_history_from_file(args[1]);
+      }
+      else if(args[0] == "-a"){
+        cmd_history.append_history_to_file(args[1]);
       }
       else if(args[0] == "-w"){
         cmd_history.write_history_to_file(args[1]);
