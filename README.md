@@ -1,34 +1,211 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/33f33da2-86e0-49e2-9503-7e0baea76699)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# Custom Shell Implementation
 
-This is a starting point for C++ solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+A feature-rich, Unix-like shell implementation written in C++ with support for command execution, pipelines, history management, and tab completion.
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+## Features
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+### Core Shell Features
+- **Interactive Command Line**: Full readline support with command history navigation
+- **Built-in Commands**: `exit`, `echo`, `type`, `pwd`, `cd`, `history`
+- **External Command Execution**: Run any executable from PATH
+- **Pipeline Support**: Chain commands with `|` operator
+- **Tab Completion**: Auto-complete commands and executables from PATH
+- **Quote Handling**: Support for single quotes, double quotes, and escape sequences
+- **I/O Redirection**: Basic output redirection support in echo command
 
-# Passing the first stage
+### Advanced Features
+- **Command History**: Persistent command history with file support
+- **Path Resolution**: Automatic executable discovery from PATH environment variable
+- **Home Directory Support**: `~` expansion in cd command
+- **Signal Handling**: Proper EOF (Ctrl+D) handling
+- **Error Handling**: Comprehensive error messages and exit codes
 
-The entry point for your `shell` implementation is in `src/main.cpp`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+## Project Structure
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
+```
+shell/
+├── shell.h          # Main header file with declarations
+├── main.cpp         # Main shell loop and built-in commands
+├── completion.cpp   # Tab completion system
+├── parser.cpp       # Command parsing and text processing
+├── executor.cpp     # Command execution and pipeline handling
+├── history.cpp      # History management implementation
+├── Makefile         # Build configuration
+└── README.md        # This file
 ```
 
-Time to move on to the next stage!
+## Prerequisites
 
-# Stage 2 & beyond
+### System Requirements
+- Linux/Unix-like operating system
+- C++17 compatible compiler (GCC 7+ or Clang 5+)
+- GNU Readline library
 
-Note: This section is for stages 2 and beyond.
+### Installing Dependencies
 
-1. Ensure you have `cmake` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `src/main.cpp`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install build-essential libreadline-dev
+```
+
+**CentOS/RHEL/Fedora:**
+```bash
+# CentOS/RHEL
+sudo yum install gcc-c++ readline-devel
+
+# Fedora
+sudo dnf install gcc-c++ readline-devel
+```
+
+**macOS:**
+```bash
+# Install Xcode command line tools
+xcode-select --install
+
+# Install readline via Homebrew
+brew install readline
+```
+
+## Building and Running
+
+### Quick Start
+```bash
+# Clone or download the project
+git clone <repository-url>
+cd shell
+
+# Build the shell
+make
+
+# Run the shell
+./shell
+```
+
+### Build Options
+```bash
+make clean      # Clean build artifacts
+make install    # Install to /usr/local/bin (requires sudo)
+make uninstall  # Remove from /usr/local/bin
+make run        # Build and run in one command
+```
+
+### Manual Compilation
+```bash
+g++ -std=c++17 -Wall -Wextra -g main.cpp completion.cpp parser.cpp executor.cpp history.cpp -o shell -lreadline
+```
+
+## Usage Examples
+
+### Basic Commands
+```bash
+$ pwd
+/home/user/shell
+
+$ echo "Hello World"
+Hello World
+
+$ type ls
+ls is /bin/ls
+
+$ cd /tmp
+$ pwd
+/tmp
+
+$ cd ~
+$ pwd
+/home/user
+```
+
+### Pipeline Examples
+```bash
+$ ls | grep .cpp
+main.cpp
+completion.cpp
+parser.cpp
+
+$ echo "test" | cat
+test
+```
+
+### History Management
+```bash
+$ history          # Show all history
+$ history 5        # Show last 5 commands
+$ history -w file  # Write history to file
+$ history -r file  # Read history from file
+```
+
+### Tab Completion
+- Press `Tab` to auto-complete commands
+- Works with both built-in commands and external executables
+- Supports partial command matching
+
+## Built-in Commands
+
+| Command | Description | Usage |
+|---------|-------------|--------|
+| `exit [0]` | Exit the shell | `exit` or `exit 0` |
+| `pwd` | Print working directory | `pwd` |
+| `cd [path]` | Change directory | `cd`, `cd /path`, `cd ~` |
+| `echo [args]` | Print arguments | `echo Hello World` |
+| `type [cmd]` | Show command type/location | `type ls` |
+| `history [n]` | Show command history | `history`, `history 10` |
+
+### History Command Options
+- `history -w file` - Write current history to file
+- `history -r file` - Read history from file
+- `history -a file` - Append new history entries to file
+
+## Environment Variables
+
+The shell respects the following environment variables:
+- `PATH` - Used for executable discovery and tab completion
+- `HOME` - Used for `~` expansion in cd command
+- `HISTFILE` - Persistent history file location
+
+## Configuration
+
+### Setting Up History Persistence
+```bash
+# In your .bashrc or .profile
+export HISTFILE=~/.shell_history
+
+# Then run the shell
+./shell
+```
+
+## Limitations
+
+- No background job control (`&`, `jobs`, `fg`, `bg`)
+- Limited I/O redirection (only basic output redirection in echo)
+- No command substitution or variable expansion
+- No wildcard/glob expansion
+- No complex control structures (if, while, for)
+
+## Development
+
+### Code Organization
+- **shell.h**: All function declarations and class definitions
+- **main.cpp**: Main shell loop and built-in command implementations
+- **completion.cpp**: Tab completion system using readline
+- **parser.cpp**: Command parsing, tokenization, and utility functions
+- **pipeline.cpp**: Command execution, pipeline handling, and process management
+- **history.cpp**: History class implementation with file I/O
+
+### Adding New Built-in Commands
+1. Add command name to the `commands` set in main.cpp
+2. Add command handling logic in the main loop
+3. Update tab completion in completion.cpp if needed
+
+## Future Enhancements
+
+- [ ] Job control support
+- [ ] Variable expansion and substitution
+- [ ] Wildcard/glob pattern matching
+- [ ] Configuration file support
+- [ ] Syntax highlighting
+- [ ] Command aliases
+
+---
+
