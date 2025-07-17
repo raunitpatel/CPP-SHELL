@@ -349,10 +349,21 @@ class History{
 
       return;
     }
-    void print_history(){
-      for(int i=0;i<sz;i++){
-        cout<<i+1<<" "<<historic_commands[i]<<endl;
+    void print_history(int x){
+      if(sz == 0){
+        return;
       }
+      if(x != -1){
+        for(int i=sz-x;i<sz;i++){
+          cout<<i+1<<" "<<historic_commands[i]<<endl;
+        }
+      }
+      else{
+        for(int i=0;i<sz;i++){
+          cout<<i+1<<" "<<historic_commands[i]<<endl;
+        }
+      }
+      
       return;
     }
 };
@@ -432,7 +443,14 @@ int main() {
       continue;
     }
     else if(command_name == "history"){
-      cmd_history.print_history();
+      // cout<<args.size();
+      if(args.empty()){
+        cmd_history.print_history(-1);
+      }
+      else{
+        int pos = stoi(args[0]);
+        cmd_history.print_history(pos);
+      }
       continue;
     }
 
