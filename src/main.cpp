@@ -5,6 +5,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <filesystem>
+#include <sys/wait.h>
 #include <cstdlib>
 #include <unistd.h> 
 #include <algorithm> 
@@ -16,52 +17,63 @@ namespace fs = std::filesystem;
 set<string> commands = {"exit", "echo", "type", "pwd", "cd"};
 
 char* command_generator(const char* text, int state) {
-  static vector<string> all_candidates;
-  static size_t index;
-  static string prefix;
+  static vector<string> matches;
+  static size_t match_index;
 
   if (state == 0) {
     // Reset for a new completion attempt
-    all_candidates.clear();
-    index = 0;
-    prefix = text;
+    matches.clear();
+    match_index = 0;
+
+    set<string> all_candidates;
 
     // 1. Add built-in commands
     for (const auto& cmd : commands) {
-      all_candidates.push_back(cmd);
+      all_candidates.insert(cmd);
     }
 
     // 2. Add external commands from PATH
-    const char* path_env = getenv("PATH");
-    if (path_env) {
-      stringstream ss(path_env);
-      string dir;
-      while (getline(ss, dir, ':')) {
-        if (!fs::exists(dir)) continue;
+    string PATH_ENV = "";
+    PATH_ENV = getenv("PATH");
+    if(PATH_ENV != " "){
+      vector<string> folders;
+      string folder="";
+      for(auto x:PATH_ENV){
+        if(x==':'){
+          folders.push_back(folder);
+          folder="";
+        }
+        else{
+          folder+=x;
+        }
+      }
+      if (!folder.empty()) {
+          folders.push_back(folder); 
+      }
+      for(auto dir:folders){
+        if(fs::exists(dir) == false) continue;
 
-        for (const auto& entry : fs::directory_iterator(dir)) {
-          if (entry.is_regular_file() &&
-              access(entry.path().c_str(), X_OK) == 0) {
-            all_candidates.push_back(entry.path().filename().string());
+        for(auto file : fs::directory_iterator(dir)){
+          if (file.is_regular_file() && access(file.path().c_str(), X_OK) == 0) {
+            all_candidates.insert(file.path().filename().string());
           }
         }
       }
     }
 
-    // Remove duplicates
-    sort(all_candidates.begin(), all_candidates.end());
-    all_candidates.erase(unique(all_candidates.begin(), all_candidates.end()), all_candidates.end());
-  }
-
-  // Return matching commands
-  while (index < all_candidates.size()) {
-    const string& cmd = all_candidates[index++];
-    if (cmd.find(prefix) == 0) {
-      return strdup(cmd.c_str());  // must be heap-allocated
+    for(auto candidate:all_candidates){
+      if(candidate.find(text) == 0){
+        matches.push_back(candidate);
+      }
     }
   }
 
-  return nullptr;
+  if(match_index < matches.size()){
+    return strdup(matches[match_index++].c_str());
+  } 
+  else{
+    return nullptr;
+  }
 }
 
 
@@ -180,6 +192,146 @@ string get_executable_path(string target_filename){
   return ans;
 }
 
+void execute_pipeline(vector<vector<string>> &pipe_commands){
+  int num_cmds = pipe_commands.size();
+  int pipe_fds[2];
+  int prev_fd = -1;
+  for(int i=0;i<num_cmds;i++){
+    if (i < num_cmds - 1 && pipe(pipe_fds) == -1) {
+      perror("pipe");
+      return;
+    }
+    pid_t pid = fork();
+    if (pid < 0) {
+      perror("fork");
+      return;
+    }
+    if(pid == 0){
+
+      if(i> 0){
+        dup2(prev_fd, STDIN_FILENO);
+        close(prev_fd);
+      }
+      if(i < (num_cmds-1)){
+        close(pipe_fds[0]);
+        dup2(pipe_fds[1], STDOUT_FILENO);
+        close(pipe_fds[1]);
+      }
+
+      vector<string>& tokens = pipe_commands[i];
+      string command_name = tokens[0];
+      vector<string> args(tokens.begin() + 1, tokens.end());
+
+      if(command_name == "echo"){
+
+        bool has_stdout_redirect = false;
+        bool has_stderr_redirect = false;
+        bool has_stdout_append_redirect = false;
+        bool has_stderr_append_redirect = false;
+
+        string stdout_file = "";
+        string stderr_file = "";
+
+        string content = "";
+
+        for(int i=0;i<args.size();i++){
+          if((args[i] == "1>" or args[i] == ">") and i+1 < args.size()){
+            stdout_file = args[i+1];
+            has_stdout_redirect = true;
+            i++;
+          }
+          else if((args[i] == "1>>" or args[i] == ">>") and i+1 < args.size()){
+            stdout_file = args[i+1];
+            has_stdout_append_redirect = true;
+            i++;
+          }
+          else if(args[i] == "2>"  and i+1 < args.size()){
+            stderr_file = args[i+1];
+            has_stderr_redirect = true;
+            i++;
+          }
+          else if(args[i] == "2>>" and i+1 < args.size()){
+            stderr_file = args[i+1];
+            has_stderr_append_redirect = true;
+            i++;
+          }
+          else{
+            content += args[i] + " ";
+          }
+        }
+
+        if(!content.empty()){
+          content.pop_back();
+        }
+        if(has_stdout_append_redirect){
+          ofstream out(stdout_file, ios::app); // append
+          if (out.is_open()) {
+              out << content << endl;
+              out.close();
+          }
+        }
+        else if(has_stdout_redirect){
+          ofstream out(stdout_file);
+          if(out.is_open()){
+            out<<content<<endl;
+            out.close();
+          }
+        }
+        else{
+          std::cout << content << std::endl;
+        }
+
+        if(has_stderr_redirect){
+          ofstream err(stderr_file);
+          if(err.is_open()){
+            err.close();
+          }
+        }
+        exit(0);
+      }
+
+      else if(command_name == "type"){
+        if(args.size() > 0 and commands.find(args[0]) != commands.end()){
+          cout<<args[0]<<" is a shell builtin"<<endl;
+        }
+        else if(args.size() > 0 ){
+          string filepath=get_executable_path(args[0]);
+          if(filepath != ""){
+            cout<<args[0]<<" is "<< filepath<<endl;
+          }
+          else cout<<args[0]<< ": not found"<<endl;
+        }
+        exit(0);
+      }
+      else if(get_executable_path(command_name) != ""){
+        string fullCommand = escapeShellArg(command_name);
+        for(auto arg:args){
+          fullCommand += " " + escapeShellArg(arg);
+        }
+        system(fullCommand.c_str());
+        exit(0);
+      }
+      else{
+        string input = "";
+        for(auto x: pipe_commands[i]){
+          input+=x;
+          input+=' ';
+        }
+        if(!input.empty()) input.pop_back();
+        cout<<input<<": command not found"<<endl;
+        exit(127);
+      }
+    }
+    else{
+      if(prev_fd != -1) close(prev_fd);
+      if(i<num_cmds -1){
+        close(pipe_fds[1]);
+        prev_fd = pipe_fds[0];
+      }
+    }
+  }
+  while(wait(nullptr) > 0 );
+}
 
 
 int main() {
@@ -199,6 +351,11 @@ int main() {
     string input = input_cstr;
     free(input_cstr);
     vector<string> tokens = get_cleaned_text(input);
+    if(tokens.empty()){
+      continue;
+    }
+    
+    
     string command_name = tokens[0];
     vector<string> args;
     for(int i=1;i<tokens.size();i++){
@@ -211,96 +368,9 @@ int main() {
       }
     }
 
-    else if(command_name == "echo"){
-
-      bool has_stdout_redirect = false;
-      bool has_stderr_redirect = false;
-      bool has_stdout_append_redirect = false;
-      bool has_stderr_append_redirect = false;
-
-      string stdout_file = "";
-      string stderr_file = "";
-
-      string content = "";
-
-      for(int i=0;i<args.size();i++){
-        if((args[i] == "1>" or args[i] == ">") and i+1 < args.size()){
-          stdout_file = args[i+1];
-          has_stdout_redirect = true;
-          i++;
-        }
-        else if((args[i] == "1>>" or args[i] == ">>") and i+1 < args.size()){
-          stdout_file = args[i+1];
-          has_stdout_append_redirect = true;
-          i++;
-        }
-        else if(args[i] == "2>"  and i+1 < args.size()){
-          stderr_file = args[i+1];
-          has_stderr_redirect = true;
-          i++;
-        }
-        else if(args[i] == "2>>" and i+1 < args.size()){
-          stderr_file = args[i+1];
-          has_stderr_append_redirect = true;
-          i++;
-        }
-        else{
-          content += args[i] + " ";
-        }
-      }
-
-      if(!content.empty()){
-        content.pop_back();
-      }
-      if(has_stdout_append_redirect){
-        ofstream out(stdout_file, ios::app); // append
-        if (out.is_open()) {
-            out << content << endl;
-            out.close();
-        }
-      }
-      else if(has_stdout_redirect){
-        ofstream out(stdout_file);
-        if(out.is_open()){
-          out<<content<<endl;
-          out.close();
-        }
-      }
-      else{
-        std::cout << content << std::endl;
-      }
-
-      if(has_stderr_redirect){
-        ofstream err(stderr_file);
-        if(err.is_open()){
-          err.close();
-        }
-      }
-    }
-
-    else if(command_name == "type"){
-      if(args.size() > 0 and commands.find(args[0]) != commands.end()){
-        cout<<args[0]<<" is a shell builtin"<<endl;
-      }
-      else if(args.size() > 0 ){
-        string filepath=get_executable_path(args[0]);
-        if(filepath != ""){
-          cout<<args[0]<<" is "<< filepath<<endl;
-        }
-        else cout<<args[0]<< ": not found"<<endl;
-      }
-    }
-
-    else if(get_executable_path(command_name) != ""){
-      string fullCommand = escapeShellArg(command_name);
-      for(auto arg:args){
-        fullCommand += " " + escapeShellArg(arg);
-      }
-      system(fullCommand.c_str());
-    }
-
     else if(command_name == "pwd"){
       cout<<curr_dir.string()<<endl;
+      continue;
     }
 
     else if(command_name == "cd"){
@@ -318,25 +388,42 @@ int main() {
       else{
           path_to_go = args[0];
       }
-      if (!args.empty() && !path_to_go.empty() && path_to_go[0] == '~') {
+      
+      if(!args.empty() && !path_to_go.empty() && path_to_go[0] == '~'){
         std::string suffix = path_to_go.substr(1);
         if(!HOME_ENV.empty()){
             path_to_go = std::string(HOME_ENV) + suffix;
         }
       }
+
       fs::path abs_dir_path(path_to_go);
-      if (fs::exists(abs_dir_path) && fs::is_directory(abs_dir_path)) {
+      if(fs::exists(abs_dir_path) && fs::is_directory(abs_dir_path)){
           fs::current_path(abs_dir_path);
           curr_dir = fs::current_path();
-      } else {
+      }
+      else{
           std::cout << "cd: " << abs_dir_path.string() << ": No such file or directory" << std::endl;
       }
+      continue;
+    }
 
+    vector<vector<string>> pipe_commands;
+    vector<string> temp_tokens;
+    for(auto token:tokens){
+      if(token == "|"){
+        pipe_commands.push_back(temp_tokens);
+        temp_tokens.clear();
+      }
+      else{
+        temp_tokens.push_back(token);
+      }
     }
+    if(!temp_tokens.empty())pipe_commands.push_back(temp_tokens);
+
+    execute_pipeline(pipe_commands);
     
-    else{
-      cout<<input<<": command not found"<<endl;
-    }
+    
+    
   }
   return 0;
 }
