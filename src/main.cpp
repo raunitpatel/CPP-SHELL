@@ -343,6 +343,18 @@ class History{
       curr_pos = 0;
       sz = 0;
     }
+    void append_commands_to_history_from_file(string filename){
+      ifstream infile(filename);
+      string line;
+      while(getline(infile, line)){
+        if(!line.empty()){
+          historic_commands.push_back(line);
+          add_history(line.c_str());
+          sz++;
+        }
+      }
+      infile.close();
+    }
     void put_commands_in_history(string command){
       historic_commands.push_back(command);
       sz++;
@@ -353,7 +365,7 @@ class History{
       if(sz == 0){
         return;
       }
-      if(x != -1){
+      else if(x != -1){
         for(int i=sz-x;i<sz;i++){
           cout<<i+1<<" "<<historic_commands[i]<<endl;
         }
@@ -391,9 +403,9 @@ int main() {
       continue;
     }
     
-    if (!input.empty()){
-      cmd_history.put_commands_in_history(input);  
-    }
+    
+    cmd_history.put_commands_in_history(input);  
+    
 
     
     string command_name = tokens[0];
@@ -446,9 +458,11 @@ int main() {
       continue;
     }
     else if(command_name == "history"){
-      // cout<<args.size();
       if(args.empty()){
         cmd_history.print_history(-1);
+      }
+      else if(args[0] == "-r"){
+        cmd_history.append_commands_to_history_from_file(args[1]);
       }
       else{
         int pos = stoi(args[0]);
