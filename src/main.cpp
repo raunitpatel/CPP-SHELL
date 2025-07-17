@@ -346,7 +346,7 @@ class History{
     void put_commands_in_history(string command){
       historic_commands.push_back(command);
       sz++;
-
+      add_history(command.c_str());
       return;
     }
     void print_history(int x){
@@ -391,7 +391,10 @@ int main() {
       continue;
     }
     
-    cmd_history.put_commands_in_history(input);
+    if (!input.empty()){
+      cmd_history.put_commands_in_history(input);  
+    }
+
     
     string command_name = tokens[0];
     vector<string> args;
@@ -468,8 +471,6 @@ int main() {
     if(!temp_tokens.empty())pipe_commands.push_back(temp_tokens);
 
     execute_pipeline(pipe_commands);
-    
-    
     
   }
   return 0;
